@@ -364,10 +364,11 @@ FodyWeavers.xsd
 
 
 # .gitignore
-
-bin/
-obj/
-.vs/
-.vscode/
-app.db
-data/
+**/.dockerignore
+**/.git
+**/.gitignore
+**/.vscode
+**/bin
+**/obj
+Dockerfile
+README.md

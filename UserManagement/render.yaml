@@ -1,12 +1,16 @@
-﻿# render.yaml
-services:
+﻿services:
   - type: web
     name: user-management
-    runtime: dotnet
-    buildCommand: dotnet publish -c Release -o output
-    startCommand: dotnet UserManagement.dll
+    runtime: docker
+    env: docker  # OR env: node for native
+    plan: free
+    region: frankfurt  # Choose closest to your users
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__DefaultConnection
-        value: Data Source=./app.db
+        value: Data Source=/var/lib/render/app.db
+    disk:
+      name: data
+      mountPath: /var/lib/render
+      sizeGB: 1
