@@ -1,39 +1,30 @@
-############################################
-# Stage 1: Build your .NET 8 MVC project  #
-############################################
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /app
+WORKDIR /src
 
-# 1) Copy everything (all folders and files) into /app so that
-#    project references between UserManagement and the class libs are intact.
+# Copy all projects
+COPY ["UserManagement.Core/*.csproj", "UserManagement.Core/"]
+COPY ["UserManagement.Infrastructure.MsSql/*.csproj", "UserManagement.Infrastructure.MsSql/"]
+COPY ["UserManagement.Services/*.csproj", "UserManagement.Services/"]
+COPY ["UserManagement/*.csproj", "UserManagement/"]
+
+# Restore dependencies
+RUN dotnet restore "UserManagement/UserManagement.csproj"
+
+# Copy all source code
 COPY . .
 
-# 2) Switch into the MVC project folder
-WORKDIR /app/UserManagement
+# Build application
+WORKDIR "/src/UserManagement"
+RUN dotnet build "UserManagement.csproj" -c Release -o /app/build
 
-# 3) Restore NuGet packages for UserManagement.csproj (it will pull in the class libs via ProjectReference)
-RUN dotnet restore
+# Publish application
+FROM build AS publish
+RUN dotnet publish "UserManagement.csproj" -c Release -o /app/publish
 
-# 4) Publish the MVC app into /app/publish
-RUN dotnet publish -c Release -o /app/publish
-
-
-
-####################################
-# Stage 2: Create the runtime image #
-####################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-
-# 5) Copy the published output from the build stage
-COPY --from=build /app/publish ./
-
-# 6) Expose port 8080 (Render expects the container to listen here)
-EXPOSE 8080
-
-# 7) Tell Kestrel to listen on port 8080
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-# 8) Launch your MVC app
+EXPOSE 80
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "UserManagement.dll"]
