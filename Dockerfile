@@ -1,14 +1,22 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY . .
+
+# Copy solution and project files
+COPY *.sln .
+COPY ./*/*.csproj ./
+RUN for file in $(ls *.csproj); do mkdir -p ${file%.*}/ && mv $file ${file%.*}/; done
+
+# Restore dependencies
 RUN dotnet restore
-RUN dotnet publish -c Release -o /app
+
+# Copy everything else and build
+COPY . .
+WORKDIR /src/UserManagement
+RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS runtime
 WORKDIR /app
-COPY --from=build /app .
-ENV ASPNETCORE_URLS=http://*:5000
-EXPOSE 5000
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "UserManagement.dll"]
