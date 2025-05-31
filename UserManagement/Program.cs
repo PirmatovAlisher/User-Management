@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Reflection;
 using UserManagement.Core.Interfaces;
 using UserManagement.Infrastructure.MsSql.Data;
@@ -19,10 +20,13 @@ namespace UserManagement
 			builder.Services.AddControllersWithViews();
 
 
-			builder.Services.AddDbContext<UserDbContext>(options =>
-			options.UseSqlite("Data Source=usermgmt.db"));
+            
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            builder.Services.AddDbContext<UserDbContext>(options =>
+                options.UseSqlite(connectionString));
 
-			builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
 			builder.Services.AddScoped<IUserService, UserService>();
 			builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
 
