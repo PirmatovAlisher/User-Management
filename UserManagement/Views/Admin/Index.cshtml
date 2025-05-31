@@ -1,0 +1,453 @@
+﻿@model List<UserDto>
+@{
+    ViewData["Title"] = "Admin Panel";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">User Management</h2>
+        <div class="toolbar">
+            <button id="blockBtn" class="btn btn-warning" title="Block selected users">
+                @* <i class="fas fa-lock"></i> *@ Block
+            </button>
+            <button id="unblockBtn" class="btn btn-success" title="Unblock selected users">
+                <i class="fas fa-lock-open"></i> @* Unblock *@
+            </button>
+            <button id="deleteBtn" class="btn btn-danger" title="Delete selected users">
+                <i class="fas fa-trash"></i> @* Delete *@
+            </button>
+        </div>
+    </div>
+
+    <div class="alert alert-success" id="statusMessage" style="display: none;"></div>
+
+    <div class="table-responsive bg-white rounded shadow-sm">
+        <table id="userTable" class="table table-hover">
+            <thead>
+                <tr>
+                    <th>
+                        <input type="checkbox" id="selectAll">
+                        <span class="select-all-text">Select All</span>
+                    </th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Registration</th>
+                    <th>Last Activity</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    <tr>
+                        <td><input type="checkbox" class="user-checkbox" value="@user.Id"></td>
+                        <td>@user.Name</td>
+                        <td>@user.Email</td>
+                        <td>@user.RegistrationLocal</td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <div class="time-ago mb-2">
+                                    @{
+                                        var now = DateTime.UtcNow;
+                                        var diff = now - user.LastLoginTime;
+                                        string timeAgo;
+                                        if (diff.TotalMinutes < 1)
+                                        {
+                                            timeAgo = "Just now";
+                                        }
+                                        else if (diff.TotalMinutes < 60)
+                                        {
+                                            timeAgo = $"{(int)diff.TotalMinutes} min ago";
+                                        }
+                                        else if (diff.TotalHours < 24)
+                                        {
+                                            timeAgo = $"{(int)diff.TotalHours} hr ago";
+                                        }
+                                        else if (diff.TotalDays < 7)
+                                        {
+                                            timeAgo = $"{(int)diff.TotalDays} days ago";
+                                        }
+                                        else if (diff.TotalDays < 30)
+                                        {
+                                            timeAgo = $"{(int)(diff.TotalDays / 7)} weeks ago";
+                                        }
+                                        else
+                                        {
+                                            timeAgo = $"{(int)(diff.TotalDays / 30)} months ago";
+                                        }
+                                    }
+                                    <span class="@(diff.TotalDays < 3 ? "text-success" : diff.TotalDays < 7 ? "text-warning" : "text-danger")">
+                                        @timeAgo
+                                    </span>
+                                </div>
+                                <div class="activity-chart">
+                                    <div class="chart-container">
+                                        @{
+                                            // Get the 10 most recent activities
+                                            var bars = user.ActivityTimestamps
+                                            .OrderByDescending(t => t)
+                                            .Take(10)
+                                            .ToList();
+
+                                            // Calculate max height for normalization
+                                            var maxCount = bars.Any() ? bars.Count : 1;
+                                        }
+                                        @for (int i = 0; i < 10; i++)
+                                        {
+                                            if (i < bars.Count)
+                                            {
+                                                var timestamp = bars[i];
+                                                // Calculate height based on recency (most recent = tallest)
+                                                var heightPercentage = 100 - (i * 10);
+                                                <div class="chart-bar-container" data-toggle="tooltip" title="@timestamp.ToLocalTime().ToString("MMM dd, yyyy h:mm tt")">
+                                                    <div class="chart-bar" style="height: @(heightPercentage)%;"></div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="chart-bar-container">
+                                                    <div class="chart-bar" style="height: 0%;"></div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="status-cell @(user.IsActive ? "status-active" : "status-blocked")">
+                            <span>@user.Status</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        :root {
+            --active-color: #4CAF50;
+            --active-bg: rgba(76, 175, 80, 0.1);
+            --blocked-color: #F44336;
+            --blocked-bg: rgba(244, 67, 54, 0.1);
+            --primary: #4361ee;
+            --light-blue: #64b5f6;
+            --light-blue-hover: #1e88e5;
+        }
+
+        .toolbar .btn {
+            margin-left: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            .toolbar .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            }
+
+        #statusMessage {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 6px;
+        }
+
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        #userTable {
+            margin-bottom: 0;
+        }
+
+            #userTable thead {
+                background: linear-gradient(to right, #4361ee, #3f37c9);
+                color: white;
+            }
+
+            #userTable th {
+                padding: 16px 12px;
+                font-weight: 600;
+                position: relative;
+            }
+
+            #userTable td {
+                padding: 12px;
+                vertical-align: middle;
+            }
+
+            #userTable tbody tr {
+                transition: background-color 0.2s;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+                #userTable tbody tr:last-child {
+                    border-bottom: none;
+                }
+
+                #userTable tbody tr:hover {
+                    background-color: rgba(67, 97, 238, 0.05);
+                }
+
+        .activity-chart {
+            display: flex;
+            height: 60px;
+            align-items: flex-end;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            height: 100%;
+            gap: 4px;
+        }
+
+        .chart-bar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .chart-bar {
+            width: 70%;
+            background: var(--light-blue);
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s ease;
+        }
+
+        .chart-bar-container:hover .chart-bar {
+            background: var(--light-blue-hover);
+            transform: scaleY(1.1);
+            transform-origin: bottom;
+        }
+
+        .status-cell {
+            text-align: center;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+
+        .status-active {
+            background-color: var(--active-bg);
+            color: var(--active-color);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-blocked {
+            background-color: var(--blocked-bg);
+            color: var(--blocked-color);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .time-ago {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .text-success {
+            color: #28a745;
+        }
+
+        .text-warning {
+            color: #ffc107;
+        }
+
+        .text-danger {
+            color: #dc3545;
+        }
+
+        .user-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        #selectAll {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .select-all-text {
+            font-size: 12px;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tooltip.js/1.3.3/tooltip.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // Initialize tooltips
+            $('[data-toggle="tooltip"]').tooltip({
+                placement: 'top',
+                trigger: 'hover'
+            });
+
+            // Enhanced select all functionality
+            $('#selectAll').change(function () {
+                const isChecked = $(this).prop('checked');
+                $('.user-checkbox').prop('checked', isChecked);
+                updateSelectAllLabel();
+            });
+
+            // Update select all when individual checkboxes change
+            $('.user-checkbox').change(function () {
+                const allChecked = $('.user-checkbox:checked').length === $('.user-checkbox').length;
+                const noneChecked = $('.user-checkbox:checked').length === 0;
+
+                if (allChecked) {
+                    $('#selectAll').prop('checked', true);
+                } else if (noneChecked) {
+                    $('#selectAll').prop('checked', false);
+                } else {
+                    $('#selectAll').prop('indeterminate', true);
+                }
+
+                updateSelectAllLabel();
+            });
+
+            function updateSelectAllLabel() {
+                const isChecked = $('#selectAll').prop('checked');
+                const isIndeterminate = $('#selectAll').prop('indeterminate');
+
+                if (isIndeterminate) {
+                    $('.select-all-label').text('Partial Selection');
+                } else {
+                    $('.select-all-label').text(isChecked ? 'Deselect All' : 'Select All');
+                }
+            }
+
+            // Block users action
+            $("#blockBtn").click(function () {
+                const selectedIds = getSelectedUserIds();
+                if (!selectedIds.length) return;
+
+                blockUsers(selectedIds);
+            });
+
+            // Unblock users action
+            $("#unblockBtn").click(function () {
+                const selectedIds = getSelectedUserIds();
+                if (!selectedIds.length) return;
+
+                unblockUsers(selectedIds);
+            });
+
+            // Delete users action
+            $("#deleteBtn").click(function () {
+                const selectedIds = getSelectedUserIds();
+                if (!selectedIds.length) return;
+
+                if (!confirm('Are you sure you want to delete the selected users?')) {
+                    return;
+                }
+
+                deleteUsers(selectedIds);
+            });
+
+            // Get selected user IDs
+            function getSelectedUserIds() {
+                const selectedIds = $('.user-checkbox:checked').map(function () {
+                    return parseInt($(this).val());
+                }).get();
+
+                if (selectedIds.length === 0) {
+                    showStatus('Please select at least one user', 'danger');
+                    return [];
+                }
+
+                return selectedIds;
+            }
+
+            // Block users function
+            function blockUsers(userIds) {
+                $.ajax({
+                    url: '/Admin/BlockUsers',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(userIds),
+                    success: function (response) {
+                        showStatus("Users blocked successfully", 'success');
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1500);
+                    },
+                    error: function (xhr) {
+                        showStatus('Error blocking users: ' + xhr.responseText, 'danger');
+                    }
+                });
+            }
+
+            // Unblock users function
+            function unblockUsers(userIds) {
+                $.ajax({
+                    url: '/Admin/UnblockUsers',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(userIds),
+                    success: function (response) {
+                        showStatus("Users unblocked successfully", 'success');
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1500);
+                    },
+                    error: function (xhr) {
+                        showStatus('Error unblocking users: ' + xhr.responseText, 'danger');
+                    }
+                });
+            }
+
+            // Delete users function
+            function deleteUsers(userIds) {
+                $.ajax({
+                    url: '/Admin/DeleteUsers',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(userIds),
+                    success: function (response) {
+                        showStatus("Users deleted successfully", 'success');
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1500);
+                    },
+                    error: function (xhr) {
+                        showStatus('Error deleting users: ' + xhr.responseText, 'danger');
+                    }
+                });
+            }
+
+            // Show status message
+            function showStatus(message, type) {
+                const status = $('#statusMessage');
+                status.removeClass('alert-success alert-danger')
+                    .addClass(`alert-${type}`)
+                    .text(message)
+                    .fadeIn();
+
+                setTimeout(() => status.fadeOut(), 3000);
+            }
+        });
+    </script>
+}
