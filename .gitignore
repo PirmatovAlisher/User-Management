@@ -361,3 +361,18 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+
+# .gitignore
+
+# Ignore SQLite files ANYWHERE in project
+**/app.db
+**/app.db-shm
+**/app.db-wal
+
+# Other ignores (unchanged)
+output/
+bin/
+obj/
+.vs/
+.DS_Store

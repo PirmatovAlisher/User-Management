@@ -1,0 +1,16 @@
+﻿# render.yaml
+services:
+  - type: web
+    name: user-management
+    runtime: dotnet
+    buildCommand: dotnet publish -c Release -o output
+    startCommand: dotnet UserManagement.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        value: Data Source=./app.db
+    disk:
+      name: free-tier
+      mountPath: /opt/render/project/src
+      sizeGB: 0.5
